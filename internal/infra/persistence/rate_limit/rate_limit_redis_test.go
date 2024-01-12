@@ -27,7 +27,7 @@ func (suite *RateLimitTestSuite) SetupSuite() {
 func (suite *RateLimitTestSuite) TestRateLimitIP() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))
@@ -45,7 +45,7 @@ func (suite *RateLimitTestSuite) TestRateLimitIP() {
 func (suite *RateLimitTestSuite) TestRateLimitIPFailWatch() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))
@@ -66,7 +66,7 @@ func (suite *RateLimitTestSuite) TestRateLimitIPFailWatch() {
 func (suite *RateLimitTestSuite) TestRateLimitIPThrottle() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))
@@ -86,7 +86,7 @@ func (suite *RateLimitTestSuite) TestRateLimitIPThrottle() {
 func (suite *RateLimitTestSuite) TestRateLimitAPI() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))
@@ -105,7 +105,7 @@ func (suite *RateLimitTestSuite) TestRateLimitAPI() {
 func (suite *RateLimitTestSuite) TestRateLimitAPIFailWatch() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))
@@ -126,7 +126,7 @@ func (suite *RateLimitTestSuite) TestRateLimitAPIFailWatch() {
 func (suite *RateLimitTestSuite) TestRateLimitAPIThrottle() {
 	db, mock := redismock.NewClientMock()
 
-	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15))
+	session, err := web_session.NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15, 60))
 	suite.NoError(err)
 	repo := *NewRateLimitRepositoryRedis(db)
 	mock.ExpectGet(session.GetRequestTimerId()).SetVal(fmt.Sprintf("%d", time.Now().Unix()))

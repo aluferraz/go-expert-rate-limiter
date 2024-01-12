@@ -11,6 +11,7 @@ type conf struct {
 	RedisURI      string `mapstructure:"REDIS_URI"`
 	IPThrottling  uint   `mapstructure:"IP_THROTTLING"`
 	APIThrottling uint   `mapstructure:"API_THROTTLING"`
+	Expiration    uint   `mapstructure:"EXPIRATION"`
 }
 
 func defaultAndBindings() error {
@@ -18,6 +19,7 @@ func defaultAndBindings() error {
 		"WEBSERVER_PORT": "8080",
 		"IP_THROTTLING":  5,
 		"API_THROTTLING": 10,
+		"EXPIRATION":     60,
 		"REDIS_URI":      "redis:6379",
 	}
 	for envKey, envValue := range defaultConfigs {

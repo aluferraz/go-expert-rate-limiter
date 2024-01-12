@@ -37,10 +37,10 @@ func Bootstap() {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	limits := value_objects.NewRequestLimit(appConfig.IPThrottling, appConfig.APIThrottling)
-	middlwareRequestLimiter := dependency_injection.NewRateLimitMiddleware(rdb, limits)
+	limits := value_objects.NewRequestLimit(appConfig.IPThrottling, appConfig.APIThrottling, appConfig.Expiration)
+	middlewareRequestLimiter := dependency_injection.NewRateLimitMiddleware(rdb, limits)
 
-	webserver.AddMiddleware(middlwareRequestLimiter.RateLimiter)
+	webserver.AddMiddleware(middlewareRequestLimiter.RateLimiter)
 	log.Info().Msgf("Listening on: %s", appConfig.WebserverPort)
 	err = webserver.Start()
 	if err != nil {

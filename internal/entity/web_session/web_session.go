@@ -11,6 +11,7 @@ type WebSession struct {
 	IP                  string
 	ApiToken            string
 	maxRequestPerSecond uint
+	ExpireSeconds       uint
 }
 
 const CounterSuffix = "_counter"
@@ -18,8 +19,9 @@ const TimerSuffix = "_lastest_request"
 
 func NewWebSession(IP string, ApiToken string, requestLimits value_objects.RequestLimits) (WebSession, error) {
 	res := WebSession{
-		IP:       IP,
-		ApiToken: ApiToken,
+		IP:            IP,
+		ApiToken:      ApiToken,
+		ExpireSeconds: requestLimits.ExpireSeconds,
 	}
 	err := res.IsValid()
 	if err != nil {
@@ -58,4 +60,7 @@ func (h *WebSession) GetRequestTimerId() string {
 
 func (h *WebSession) GetRequestsLimitInSeconds() int64 {
 	return int64(h.maxRequestPerSecond)
+}
+func (h *WebSession) GetExpireInSeconds() int64 {
+	return int64(h.ExpireSeconds)
 }

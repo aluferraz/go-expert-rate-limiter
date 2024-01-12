@@ -9,9 +9,10 @@ import (
 )
 
 type RateLimiterMiddleware struct {
-	Storage     rate_limit.RateLimitRepository
-	IPLimit     uint
-	ApiKeyLimit uint
+	Storage       rate_limit.RateLimitRepository
+	IPLimit       uint
+	ApiKeyLimit   uint
+	ExpireSeconds uint
 }
 
 func NewRateLimiter(storage *rate_limit.RateLimitRepository, requestLimits value_objects.RequestLimits) *RateLimiterMiddleware {
@@ -19,6 +20,7 @@ func NewRateLimiter(storage *rate_limit.RateLimitRepository, requestLimits value
 		*storage,
 		requestLimits.IPLimit,
 		requestLimits.APILimit,
+		requestLimits.ExpireSeconds,
 	}
 }
 
@@ -29,7 +31,7 @@ func (rl *RateLimiterMiddleware) RateLimiter(next http.Handler) http.Handler {
 		websession, _ := web_session.NewWebSession(
 			r.RemoteAddr,
 			r.Header.Get("API_KEY"),
-			value_objects.NewRequestLimit(rl.IPLimit, rl.ApiKeyLimit),
+			value_objects.NewRequestLimit(rl.IPLimit, rl.ApiKeyLimit, rl.ExpireSeconds),
 		)
 
 		// create new context from `r` request context, and assign key `"user"`

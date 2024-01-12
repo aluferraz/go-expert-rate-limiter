@@ -73,8 +73,7 @@ func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(session *web_session.W
 	if err != nil {
 		return false, err
 	}
-	oneSecond := int64(1)
-	if (time.Now().Unix() - lastResetTime) >= oneSecond {
+	if (time.Now().Unix() - lastResetTime) >= session.GetExpireInSeconds() {
 		// if elapsed, reset the counter
 		err = rlim.SetRequestCounter(session)
 		return false, err
