@@ -1,12 +1,19 @@
 package web_session
+
 import (
+	"context"
+	"crypto/sha256"
+	"fmt"
+	"github.com/aluferraz/go-expert-rate-limiter/internal/value_objects"
+	"github.com/aluferraz/go-expert-rate-limiter/pkg/event_dispatcher"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
+
 type WebSessionTestSuite struct {
 	suite.Suite
-    ctx           context.Context
-    evtDispatcher *event_dispatcher.MockDispatcher
+	ctx           context.Context
+	evtDispatcher *event_dispatcher.MockDispatcher
 }
 
 func TestSuite(t *testing.T) {
@@ -14,22 +21,21 @@ func TestSuite(t *testing.T) {
 }
 
 func (suite *WebSessionTestSuite) SetupSuite() {
-    suite.ctx = context.Background()
-	ed := event_dispatcher.NewMockDispatcher()
-	ed.On("Dispatch", mock.Anything).Return(nil)
-	suite.evtDispatcher = ed
+
 }
-func (suite *WebSessionTestSuite) TestWebSession() {
-/* //TODO: Implement test, here is an inspiration to you!
-    uc := NewUseCase(
-		&suite.ctx,
-		InputDTO{},
-		event_dispatcher.NewDummyEvent(),
-		suite.evtDispatcher,
-	)
-	output, err := uc.Execute()
+func (suite *WebSessionTestSuite) TestWebSessionIP() {
+
+	session, err := NewWebSession("10.0.0.1", "", value_objects.NewRequestLimit(10, 15))
 	suite.NoError(err)
-	suite.NotEmpty(output.ExecutionId)
-	suite.evtDispatcher.AssertNumberOfCalls(suite.T(), "Dispatch", 1)
-*/
+	suite.Equal(session.GetSessionId(), fmt.Sprintf("%x", sha256.Sum256([]byte(session.IP))))
+	suite.Equal(session.GetRequestCounterId(), fmt.Sprintf("%s%s", session.GetSessionId(), CounterSuffix))
+
+}
+func (suite *WebSessionTestSuite) TestWebSessionAPIKEY() {
+
+	session, err := NewWebSession("10.0.0.1", "LUCAO", value_objects.NewRequestLimit(10, 15))
+	suite.NoError(err)
+	suite.Equal(session.GetSessionId(), fmt.Sprintf("%x", sha256.Sum256([]byte(session.ApiToken))))
+	suite.Equal(session.GetRequestCounterId(), fmt.Sprintf("%s%s", session.GetSessionId(), CounterSuffix))
+
 }

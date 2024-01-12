@@ -4,15 +4,19 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/aluferraz/go-expert-rate-limiter/internal/value_objects"
 )
 
 type WebSession struct {
 	IP                  string
 	ApiToken            string
-	maxRequestPerSecond int64
+	maxRequestPerSecond uint
 }
 
-func NewWebSession(IP string, ApiToken string, IPThrottling int64, TokenThrottling int64) (WebSession, error) {
+const CounterSuffix = "_counter"
+const TimerSuffix = "_lastest_request"
+
+func NewWebSession(IP string, ApiToken string, requestLimits value_objects.RequestLimits) (WebSession, error) {
 	res := WebSession{
 		IP:       IP,
 		ApiToken: ApiToken,
@@ -22,9 +26,9 @@ func NewWebSession(IP string, ApiToken string, IPThrottling int64, TokenThrottli
 		return WebSession{}, err
 	}
 	if res.ApiToken != "" {
-		res.maxRequestPerSecond = TokenThrottling
+		res.maxRequestPerSecond = requestLimits.IPLimit
 	} else {
-		res.maxRequestPerSecond = IPThrottling
+		res.maxRequestPerSecond = requestLimits.APILimit
 	}
 	return res, nil
 }
@@ -46,9 +50,12 @@ func (h *WebSession) GetSessionId() string {
 }
 
 func (h *WebSession) GetRequestCounterId() string {
-	return h.GetSessionId() + "_counter"
+	return h.GetSessionId() + CounterSuffix
+}
+func (h *WebSession) GetRequestTimerId() string {
+	return h.GetSessionId() + TimerSuffix
 }
 
-func (h *WebSession) GetRequestsLimit() int64 {
-	return h.maxRequestPerSecond
+func (h *WebSession) GetRequestsLimitInSeconds() int64 {
+	return int64(h.maxRequestPerSecond)
 }

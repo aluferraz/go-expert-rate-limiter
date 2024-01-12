@@ -10,12 +10,13 @@ import (
 
 type RESTEndpoint struct {
 	urlpath string
-	verb string
+	verb    string
 }
 
 type WebServer struct {
 	Router        chi.Router
 	Handlers      map[RESTEndpoint]http.HandlerFunc
+	Middlewares   []func(next http.Handler) http.Handler
 	WebServerPort string
 }
 
@@ -33,8 +34,11 @@ func NewWebServer(serverPort string) *WebServer {
 func (s *WebServer) AddHandler(urlpath string, verb string, handler http.HandlerFunc) {
 	s.Handlers[RESTEndpoint{
 		urlpath: urlpath,
-		verb: verb,
+		verb:    verb,
 	}] = handler
+}
+func (s *WebServer) AddMiddleware(midl func(next http.Handler) http.Handler) {
+	s.Middlewares = append(s.Middlewares, midl)
 }
 
 // loop through the handlers and add them to the router
@@ -42,6 +46,11 @@ func (s *WebServer) AddHandler(urlpath string, verb string, handler http.Handler
 // start the server
 func (s *WebServer) Start() error {
 	s.Router.Use(middleware.Logger)
+	s.Router.Use(middleware.RealIP)
+	s.Router.Use(middleware.Recoverer)
+	for _, handler := range s.Middlewares {
+		s.Router.Use(handler)
+	}
 	for restEndpointInfo, handler := range s.Handlers {
 		urlpath := restEndpointInfo.urlpath
 		switch verb := restEndpointInfo.verb; verb {
@@ -60,6 +69,5 @@ func (s *WebServer) Start() error {
 		}
 
 	}
-	http.ListenAndServe(s.WebServerPort, s.Router)
-	return nil
+	return http.ListenAndServe(s.WebServerPort, s.Router)
 }

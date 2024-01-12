@@ -5,37 +5,47 @@ import (
 	"errors"
 	"github.com/aluferraz/go-expert-rate-limiter/internal/entity/web_session"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 	"strconv"
+	"time"
 )
 
 type RateLimitRepositoryRedis struct {
 	Client *redis.Client // Unique to redis, can't use sql.DB abstraction here.
 }
 
-func NewRateLimitRepositoryRedis(client *redis.Client) *RateLimitRepositoryRedis {
-	return &RateLimitRepositoryRedis{Client: client}
+func NewRateLimitRepositoryRedis(client *redis.Client) *RateLimitRepository {
+	var rateLimiter RateLimitRepository
+	rateLimiter = &RateLimitRepositoryRedis{Client: client}
+	return &rateLimiter
 }
 
 func (rlim *RateLimitRepositoryRedis) SetRequestCounter(session *web_session.WebSession) error {
 	ctx := context.Background()
-	counterKey, maxRequest := session.GetSessionId(), session.GetRequestsLimit()
-	return rlim.Client.Set(ctx, counterKey, maxRequest, 0).Err()
+	counterKey, maxRequest := session.GetRequestCounterId(), uint(session.GetRequestsLimitInSeconds())
+	err := rlim.Client.Set(ctx, counterKey, maxRequest, 0).Err()
+	if err != nil {
+		return err
+	}
+	return rlim.Client.Set(ctx, session.GetRequestTimerId(), time.Now().Unix(), 0).Err()
+
 }
 
-func (rlim *RateLimitRepositoryRedis) GetLastRequestTime(resetTimeKey string) (int64, error) {
+func (rlim *RateLimitRepositoryRedis) GetLastRequestTime(session *web_session.WebSession) (int64, error) {
 	ctx := context.Background()
-
+	resetTimeKey := session.GetRequestTimerId()
 	lastResetTimeStr, err := rlim.Client.Get(ctx, resetTimeKey).Result()
-	if err != redis.Nil {
-		return -1, err
+	if errors.Is(err, redis.Nil) {
+		return -1, nil
 	}
 	lastResetTime, err := strconv.ParseInt(lastResetTimeStr, 10, 64)
 
 	return lastResetTime, err
 }
 
-func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(counterKey string) error {
+func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(session *web_session.WebSession) (bool, error) {
 	ctx := context.Background()
+	counterKey := session.GetRequestCounterId()
 	// Transactional function, optimistic lock.
 	txf := func(tx *redis.Tx) error {
 		// Get the current value or zero.
@@ -44,7 +54,8 @@ func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(counterKey string) err
 			return err
 		}
 		if remaingRequests <= 0 {
-			return errors.New("you have reached the maximum number of requests or actions allowed within a certain time frame")
+			throttledError := ThrottledError{}
+			return throttledError.ThrottledError()
 		}
 
 		// Actual operation (local in optimistic lock).
@@ -56,5 +67,29 @@ func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(counterKey string) err
 		})
 		return err
 	}
-	return rlim.Client.Watch(ctx, txf, counterKey) // Will return error if not possible.
+	var err error
+	throttledError := ThrottledError{}
+	lastResetTime, err := rlim.GetLastRequestTime(session)
+	if err != nil {
+		return false, err
+	}
+	oneSecond := int64(1)
+	if (time.Now().Unix() - lastResetTime) >= oneSecond {
+		// if elapsed, reset the counter
+		err = rlim.SetRequestCounter(session)
+		return false, err
+	}
+	for i := 0; i < int(session.GetRequestsLimitInSeconds()); i++ {
+
+		err = rlim.Client.Watch(ctx, txf, counterKey) // Will return error if not possible.
+		if errors.Is(err, redis.Nil) || err == nil {
+			return false, nil
+		}
+		if err != nil && err.Error() == throttledError.ThrottledError().Error() {
+			return true, err
+		}
+		log.Info().Msgf("Optimistic lock failed. %d.", i)
+		log.Info().Msg(err.Error())
+	}
+	return err != nil, err
 }

@@ -1,7 +1,19 @@
 package rate_limit
 
+import (
+	"errors"
+	"github.com/aluferraz/go-expert-rate-limiter/internal/entity/web_session"
+)
+
 type RateLimitRepository interface {
-	SetRequestCounter(counterKey string, maxRequest int64) error
-	GetLastRequestTime(resetTimeKey string) (int64, error)
-	DecreaseTokenBucket(counterKey string) error
+	SetRequestCounter(session *web_session.WebSession) error
+	GetLastRequestTime(session *web_session.WebSession) (int64, error)
+	DecreaseTokenBucket(session *web_session.WebSession) (bool, error)
+}
+
+type ThrottledError struct {
+}
+
+func (te *ThrottledError) ThrottledError() error {
+	return errors.New("you have reached the maximum number of requests or actions allowed within a certain time frame")
 }

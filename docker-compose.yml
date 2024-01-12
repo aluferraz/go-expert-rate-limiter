@@ -5,6 +5,8 @@ services:
     build: .
     depends_on:
       - db
+    ports:
+      - "8080:8080"
   db:
     container_name: redis
     image: redis:7-alpine
@@ -13,4 +15,4 @@ services:
       - '6379:6379'
     command: redis-server --save 20 1 --loglevel warning
     volumes:
-      - dbdata:/data
+      - ./dbdata:/data

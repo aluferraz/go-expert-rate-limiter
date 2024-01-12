@@ -8,15 +8,17 @@ import (
 
 type conf struct {
 	WebserverPort string `mapstructure:"WEBSERVER_PORT"`
-	RpsLimitIp    string `mapstructure:"RPS_LIMIT_IP"`
-	RpsLimitToke  string `mapstructure:"RPS_LIMIT_TOKEN"`
+	RedisURI      string `mapstructure:"REDIS_URI"`
+	IPThrottling  uint   `mapstructure:"IP_THROTTLING"`
+	APIThrottling uint   `mapstructure:"API_THROTTLING"`
 }
 
 func defaultAndBindings() error {
-	defaultConfigs := map[string]string{
-		"WEBSERVER_PORT":  "8080",
-		"RPS_LIMIT_IP":    "5",
-		"RPS_LIMIT_TOKEN": "10",
+	defaultConfigs := map[string]interface{}{
+		"WEBSERVER_PORT": "8080",
+		"IP_THROTTLING":  5,
+		"API_THROTTLING": 10,
+		"REDIS_URI":      "redis:6379",
 	}
 	for envKey, envValue := range defaultConfigs {
 		err := viper.BindEnv(envKey)
