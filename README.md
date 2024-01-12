@@ -1,1 +1,1 @@
-# GO-Alusoft
+``` docker compose up
