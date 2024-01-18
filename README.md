@@ -1,6 +1,8 @@
+Executar o projeto:
 ``` 
 docker compose up --build
 ```
+Testes também presentes no github-actions.
 
 # README do Projeto
 
