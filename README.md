@@ -42,7 +42,7 @@ A tabela abaixo lista as variáveis de ambiente utilizadas pelo projeto, junto c
 | -------------------- | --------- | ------------ |
 | WEBSERVER_PORT | A porta na qual o servidor web escutará as conexões recebidas. | 8080 |
 | REDIS_URI | A URI do servidor Redis usado para armazenar dados de limitação de taxa. Inclui host e porta. | redis:6379 |
-| IP_THROTTLING | O número máximo de solicitações que um endereço IP pode fazer dentro de um determinado intervalo de tempo (especificado em EXPIRATION). | 5 |
-| API_THROTTLING | O número máximo de solicitações para qualquer ponto de extremidade de API dentro de um determinado intervalo de tempo (especificado em EXPIRATION). | 10 |
+| IP_THROTTLING | O número máximo de solicitações por segundo que um endereço IP pode fazer. | 5 |
+| API_THROTTLING | O número máximo de solicitações por segundo que um usuário autenticado pode fazer | 10 |
 | EXPIRATION | A duração do intervalo de tempo, em segundos, durante o qual os limites de taxa são aplicados. | 60 |
 
