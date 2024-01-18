@@ -16,64 +16,20 @@ O pacote `rate_limit` oferece uma maneira de limitar o número de solicitações
 
 **Contadores de Solicitação:** Quando um cliente faz uma solicitação, a estrutura `RateLimitRepositoryRedis` verifica se já existe um contador para esse cliente específico no Redis. Se não existir, ele cria um com um valor inicial de `session.GetRequestsLimitInSeconds()`. Esse contador representa quantas solicitações ainda podem ser feitas antes que o cliente seja limitado pela taxa.
 
-```go
-func (rlim *RateLimitRepositoryRedis) SetRequestCounter(session *web_session.WebSession) error {
-    ctx := context.Background()
-    counterKey, maxRequest := session.GetRequestCounterId(), uint(session.GetRequestsLimitInSeconds())
-    err := rlim.Client.Set(ctx, counterKey, maxRequest, 0).Err()
-    if err != nil {
-        return err
-    }
-    return rlim.Client.Set(ctx, session.GetRequestTimerId(), time.Now().Unix(), 0).Err()
-}
-```
+https://github.com/aluferraz/go-expert-rate-limiter/blob/f3e1443242d979640bd04b355d88a97bd1e65d6a/internal/infra/persistence/rate_limit/rate_limit_redis.go#L23-L32
+
 
 **Diminuir o Token Bucket:** Cada vez que um cliente faz uma solicitação, o contador é diminuído. Se o contador atingir zero, significa que o cliente fez tantas solicitações quanto permitido dentro da janela de tempo atual (1 segundo neste caso), e solicitações adicionais serão limitadas até que a próxima janela de tempo comece.
 
-```go
-func (rlim *RateLimitRepositoryRedis) DecreaseTokenBucket(session *web_session.WebSession) (bool, error) {
-    ctx := context.Background()
-    counterKey := session.GetRequestCounterId()
-    // Função transacional, bloqueio otimista.
-    txf := func(tx *redis.Tx) error {
-        // Obter o valor atual ou zero.
-        remainingRequests, err := tx.Get(ctx, counterKey).Int()
-        if err != nil && err != redis.Nil {
-            return err
-        }
-        if remainingRequests <= 0 {
-            throttledError := ThrottledError{}
-            return throttledError.ThrottledError()
-        }
-
-        // Operação real (local no bloqueio otimista).
-        remainingRequests--
-        // A operação é confirmada apenas se as chaves assistidas permanecerem inalteradas.
-        tx.Set(ctx, counterKey, remainingRequests, 0)
-        return nil
-    }
-    // Incremento otimista.
-    err := rlim.Client.Watch(ctx, txf, counterKey)
-    if err != nil {
-        return false, err
-    }
-    return true, nil
-}
-```
+https://github.com/aluferraz/go-expert-rate-limiter/blob/f3e1443242d979640bd04b355d88a97bd1e65d6a/internal/infra/persistence/rate_limit/rate_limit_redis.go#L46-L94
 
 **Redefinir o Contador:** A cada segundo, uma tarefa em segundo plano é executada, redefinindo o contador de solicitações para cada cliente ao seu limite máximo.
 
-**Limitar o Cliente:** Se um cliente fizer mais solicitações do que o permitido em um segundo, ele será limitado e não poderá fazer mais solicitações até o próximo segundo começar. Isso é feito definindo `session.GetRequestTimerId()` como o tempo atual no formato de carimbo de data/hora Unix e aguardando sua expiração antes de permitir que o cliente faça outra solicitação.
+**Limitar o Cliente:** Se um cliente fizer mais solicitações do que o permitido em um segundo, ele será limitado e não poderá fazer mais solicitações até que o tempo definido na variável de ambiente `EXPIRATION` termine. 
 
-```go
-func (rlim *RateLimitRepositoryRedis) SetRequestTimer(session *web_session.WebSession, timer int64) error {
-    ctx := context.Background()
-    return rlim.Client.Set(ctx, session.GetRequestTimerId(), timer, 0).Err()
-}
-```
 
-Com o middleware configurado o método `DecreaseTokenBucket` é chamado em cada solicitação e caso retorne um erro (significando que o cliente foi limitado), retorna um código de status HTTP 429 (Too Many Requests) para o cliente.
-
+Com o [middleware](https://github.com/aluferraz/go-expert-rate-limiter/blob/master/internal/infra/web/middleware/rate_limiter.go) configurado o método `DecreaseTokenBucket` é chamado em cada solicitação e caso retorne um erro (significando que o cliente foi limitado), [retorna um código de status HTTP 429 (Too Many Requests) para o cliente.
+](https://github.com/aluferraz/go-expert-rate-limiter/blob/f3e1443242d979640bd04b355d88a97bd1e65d6a/internal/infra/web/middleware/rate_limiter.go#L43)
 Estratégia de rate limit aplicada:
 
 https://en.wikipedia.org/wiki/Token_bucket
